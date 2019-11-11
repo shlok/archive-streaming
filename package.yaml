@@ -1,0 +1,51 @@
+name:                archive-streaming
+version:             0.1.0.0
+github:              "shlok/archive-streaming"
+license:             BSD3
+author:              "Shlok Datye"
+maintainer:          "shlok@quant.is"
+copyright:           "2019 Shlok Datye"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+extra-libraries:
+- archive
+
+description:         Please see the README on GitHub at <https://github.com/shlok/archive-streaming#readme>
+
+ghc-options:
+- -Wall
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- mtl
+- resourcet
+- streaming
+- unliftio
+
+library:
+  source-dirs: src
+
+tests:
+  archive-streaming-test:
+    main:                TestSuite.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - archive-streaming
+    - cryptonite
+    - directory
+    - filepath
+    - QuickCheck
+    - tar
+    - tasty
+    - tasty-hunit
+    - tasty-quickcheck
+    - temporary
+    - zlib
