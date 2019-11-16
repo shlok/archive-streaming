@@ -168,6 +168,7 @@ data FileType = FileTypeRegular
               | FileTypeBlockDevice
               | FileTypeDirectory
               | FileTypeNamedPipe
+              deriving (Show, Eq)
 
 fileTypeAeIFMT :: CMode
 fileTypeAeIFMT = 0o0170000

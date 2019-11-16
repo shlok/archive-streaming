@@ -4,12 +4,12 @@ module Codec.Archive.Streaming.Tests (tests) where
 
 --------------------------------------------------------------------------------
 
-import Codec.Archive.Streaming (Header (..), readArchive)
+import Codec.Archive.Streaming (FileType (..), Header (..), readArchive)
 import Codec.Archive.Streaming.Foreign (blockSize)
 import qualified Codec.Archive.Tar as Tar (pack, write)
 import Codec.Compression.GZip (compress)
 import Control.Monad (forM)
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import Control.Monad.Trans.Resource (runResourceT)
 import Crypto.Random.Entropy (getEntropy)
 import Data.Bifunctor (first)
 import Data.ByteString (ByteString, append)
@@ -23,7 +23,7 @@ import Data.List (nub, sort)
 import Data.Maybe (fromJust)
 import qualified Streaming.Prelude as S (fold, groupBy, map, mapped, toList_)
 import System.Directory (createDirectoryIfMissing)
-import System.FilePath (addTrailingPathSeparator, joinPath, takeDirectory)
+import System.FilePath (addTrailingPathSeparator, hasTrailingPathSeparator, joinPath, takeDirectory)
 import System.IO.Temp (withSystemTempDirectory)
 import Test.QuickCheck (Gen, choose, frequency, vectorOf)
 import Test.QuickCheck.Monadic (monadicIO, pick, run)
@@ -58,24 +58,31 @@ testTar gz = testProperty "tar" $ monadicIO $  do
         let archFile = joinPath [tmpDir, "files.tar" ++ (if gz then ".gz" else "")]
         LB.writeFile archFile . (if gz then compress else id) . Tar.write =<< Tar.pack tmpDir ["files"]
 
-        pathsAndByteStrings2
+        pathsFileTypesAndByteStrings
             <- readArchive archFile
              & S.groupBy (const isRight)
-             & S.mapped (S.fold (\(mfp, mbs) e ->
+             & S.mapped (S.fold (\(mfp, mtyp, mbs) e ->
                  case e of
-                     Left h -> (unpack <$> headerPathName h, mbs)
-                     Right bs -> (mfp, case mbs of
-                                             Nothing -> Just bs
-                                             Just bs' -> Just $ bs' `append` bs)) (Nothing, Nothing) id)
-             & S.map (\(mfp, mbs) -> (fromJust mfp, mbs))
+                     Left h -> (unpack <$> headerPathName h, headerFileType h, mbs)
+                     Right bs -> (mfp, mtyp, case mbs of
+                                                Nothing -> Just bs
+                                                Just bs' -> Just $ bs' `append` bs)) (Nothing, Nothing, Nothing) id)
+             & S.map (\(mfp, mtyp, mbs) -> (fromJust mfp, fromJust mtyp, mbs))
              & S.toList_
              & runResourceT
 
-        -- Make the two lists comparable and compare them.
+        -- Make the file paths and ByteStrings comparable and compare them.
         let pathsAndByteStrings_ = sort $ map (first ("files/"++)) (("", Nothing) : pathsAndByteStrings)
-        let pathAndByteStrings2_ = sort $ pathsAndByteStrings2
+        let pathAndByteStrings2_ = sort . map (\(x, _, y) -> (x, y)) $ pathsFileTypesAndByteStrings
+        let samePathsAndByteStrings = pathsAndByteStrings_ == pathAndByteStrings2_
 
-        return $ pathsAndByteStrings_ == pathAndByteStrings2_
+        -- Also check FileType.
+        let fileTypesCorrect = all (\(fp, typ, _) ->
+                if hasTrailingPathSeparator fp
+                 then typ == FileTypeDirectory
+                 else typ == FileTypeRegular) pathsFileTypesAndByteStrings
+
+        return $ samePathsAndByteStrings && fileTypesCorrect
 
 --------------------------------------------------------------------------------
 
