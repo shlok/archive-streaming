@@ -2,7 +2,7 @@
 
 Stream data from an archive (tar, tar.gz, zip, or any other format [supported by libarchive](https://github.com/libarchive/libarchive/wiki/LibarchiveFormats)) using the Haskell [streaming](https://hackage.haskell.org/package/streaming) library.
 
-This library has the following main data type and function:
+This library provides, within `Codec.Archive.Streaming`, the following main data type and function:
 
 ```haskell
 import Control.Monad.Trans.Resource (MonadResource)
@@ -16,7 +16,7 @@ readArchive :: (MonadResource m) => FilePath -> Stream (Of (Either Header ByteSt
 
 The stream is a header followed by zero or more data chunks, and so on for each header in the archive.
 
-This library also has the following auxiliary functions to extract information from headers ([many more](https://github.com/libarchive/libarchive/blob/v3.4.0/libarchive/archive_entry.h#L238) could be added):
+This library also provides the following auxiliary functions to extract information from headers ([many more](https://github.com/libarchive/libarchive/blob/v3.4.0/libarchive/archive_entry.h#L238) could be added):
 
 ```haskell
 headerFileType     :: Header -> Maybe FileType
